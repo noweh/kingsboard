@@ -63,10 +63,22 @@ class ChessBoard extends Model implements BoardInterface
 
     public function setColor(int $x, int $y, array $opponentPieces, array $teamPieces): void
     {
-        if ($this->isAValidMove($x, $y) && $this->board[$x][$y] === null) {
+        if ($this->isAValidMove($x, $y)) {
             $board = $this->board;
-            $board[$x][$y] = isset($opponentPieces[$x][$y]) ? 'red' :
-                (isset($teamPieces[$x][$y]) ? 'green' : 'yellow');
+
+            // Set color based on the presence of opponent or team pieces or increment the count
+            // of pieces in the same position
+
+            if ($board[$x][$y] !== null) {
+                $board[$x][$y]['quantity']++;
+            } else {
+                $board[$x][$y] = [
+                    'color' => isset($opponentPieces[$x][$y]) ? 'red' :
+                        (isset($teamPieces[$x][$y]) ? 'green' : 'yellow'),
+                    'quantity' => 1
+                ];
+            }
+
             $this->board = $board;
         }
     }
