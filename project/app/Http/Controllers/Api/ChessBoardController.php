@@ -22,7 +22,7 @@ class ChessBoardController
         $alliesPieces = $enemiesPieces = [];
 
         foreach ($pieces as $piece) {
-            ${$piece['team'] . 'Pieces'}[$piece['x']][$piece['y']] = $piece;
+            ${$piece['team'] . 'Pieces'}[$piece['y']][$piece['x']] = $piece;
         }
 
         $teamPieces = ${$view . 'Pieces'};
@@ -39,6 +39,7 @@ class ChessBoardController
         }
 
         $output = new ChessBoardOutput();
+
         $output->setData(['board' => $board->getColors()]);
 
         return response()->json($output);

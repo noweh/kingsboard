@@ -24,7 +24,7 @@ abstract class AbstractLongMovePiece extends AbstractPiece implements LongMovePi
                 $this->board->setColor($x, $y, $opponentPieces, $teamPieces);
 
                 // If a piece is present, break the loop
-                if (isset($teamPieces[$x][$y]) || isset($opponentPieces[$x][$y])) {
+                if (isset($teamPieces[$y][$x]) || isset($opponentPieces[$y][$x])) {
                     break;
                 }
             }

@@ -69,12 +69,12 @@ class ChessBoard extends Model implements BoardInterface
             // Set color based on the presence of opponent or team pieces or increment the count
             // of pieces in the same position
 
-            if ($board[$x][$y] !== null) {
-                $board[$x][$y]['quantity']++;
+            if ($board[$y][$x] !== null) {
+                $board[$y][$x]['quantity']++;
             } else {
-                $board[$x][$y] = [
-                    'color' => isset($opponentPieces[$x][$y]) ? 'red' :
-                        (isset($teamPieces[$x][$y]) ? 'green' : 'yellow'),
+                $board[$y][$x] = [
+                    'color' => isset($opponentPieces[$y][$x]) ? 'red' :
+                        (isset($teamPieces[$y][$x]) ? 'green' : 'yellow'),
                     'quantity' => 1
                 ];
             }
