@@ -7,6 +7,7 @@ use App\Dto\ChessBoardInput;
 use App\Dto\ChessBoardOutput;
 use App\Http\Controllers\Api\ChessBoardController;
 use App\Interfaces\Models\BoardInterface;
+use App\Interfaces\Models\PieceInterface;
 use Illuminate\Database\Eloquent\Model;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model as ApiPlatformModel;
@@ -61,7 +62,7 @@ class ChessBoard extends Model implements BoardInterface
         $this->board = array_fill(0, 8, array_fill(0, 8, null));
     }
 
-    public function setColor(int $x, int $y, array $opponentPieces, array $teamPieces): void
+    public function setColor(int $x, int $y, PieceInterface $piece, array $opponentPieces, array $teamPieces): void
     {
         if ($this->isAValidMove($x, $y)) {
             $board = $this->board;
@@ -71,11 +72,15 @@ class ChessBoard extends Model implements BoardInterface
 
             if ($board[$y][$x] !== null) {
                 $board[$y][$x]['quantity']++;
+                $board[$y][$x]['origins'][] = ['x' => $piece->x, 'y' => $piece->y];
             } else {
                 $board[$y][$x] = [
                     'color' => isset($opponentPieces[$y][$x]) ? 'red' :
                         (isset($teamPieces[$y][$x]) ? 'green' : 'yellow'),
-                    'quantity' => 1
+                    'quantity' => 1,
+                    'origins' => [
+                        ['x' => $piece->x, 'y' => $piece->y]
+                    ],
                 ];
             }
 

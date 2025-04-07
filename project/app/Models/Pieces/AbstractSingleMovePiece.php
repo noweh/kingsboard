@@ -12,7 +12,7 @@ abstract class AbstractSingleMovePiece extends AbstractPiece implements SingleMo
             $x = $this->x + $dx;
             $y = $this->y + $dy;
 
-            $this->board->setColor($x, $y, $opponentPieces, $teamPieces);
+            $this->board->setColor($x, $y, $this, $opponentPieces, $teamPieces);
         }
     }
 }
