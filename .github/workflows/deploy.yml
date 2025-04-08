@@ -115,7 +115,7 @@ jobs:
           echo "Checking critical directory permissions..."
           # Check permissions of links and bootstrap/cache within the current directory
           ls -ld .env bootstrap/cache storage 
-          echo "----
+          echo "----"
           
           echo "Listing Artisan commands (check if app boots)..."
           /usr/bin/php8.2-cli artisan list
