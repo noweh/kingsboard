@@ -100,16 +100,23 @@ jobs:
           cd ${{ secrets.TARGET_DIRECTORY }}/current
           
           echo "Checking PHP CLI version..."
-          /usr/bin/php8.2-cli -v # Use specific PHP 8.2 CLI path
+          /usr/bin/php8.2-cli -v
+          
+          echo "Checking loaded PHP CLI modules..."
+          /usr/bin/php8.2-cli -m
+          
+          echo "Checking critical directory permissions..."
+          ls -ld .env bootstrap/cache storage storage/framework storage/logs
+          echo "----
           
           echo "Listing Artisan commands (check if app boots)..."
-          /usr/bin/php8.2-cli artisan list # Use specific PHP 8.2 CLI path
+          /usr/bin/php8.2-cli artisan list
           
           echo "Running migrations..."
-          /usr/bin/php8.2-cli artisan migrate --force # Use specific PHP 8.2 CLI path
+          /usr/bin/php8.2-cli artisan migrate --force
           
           echo "Clearing caches..."
-          /usr/bin/php8.2-cli artisan optimize:clear # Use specific PHP 8.2 CLI path
+          /usr/bin/php8.2-cli artisan optimize:clear
           
           # /usr/bin/php8.2-cli artisan queue:restart # If you use queues
           echo "Post-deployment commands finished successfully." 
