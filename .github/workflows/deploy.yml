@@ -93,6 +93,6 @@ jobs:
         script: |
           echo "Running post-deployment commands in target directory"
           cd ${{ secrets.TARGET_DIRECTORY }}/current # CD into the 'current' directory
-          php artisan migrate --force
-          php artisan optimize:clear # Or other commands like cache:clear, config:cache, etc.
-          # php artisan queue:restart # If you use queues 
+          /usr/bin/php artisan migrate --force # Use explicit PHP path
+          /usr/bin/php artisan optimize:clear # Use explicit PHP path
+          # /usr/bin/php artisan queue:restart # If you use queues 
