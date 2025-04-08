@@ -117,6 +117,15 @@ jobs:
           ls -ld .env bootstrap/cache storage 
           echo "----"
           
+          echo "Attempting to clear caches first..."
+          # Run optimize:clear first to rule out cache issues during boot
+          # Allow this command to fail without stopping the script immediately
+          set +e
+          /usr/bin/php8.2-cli artisan optimize:clear -vvv 2>&1
+          OPTIMIZE_EXIT_CODE=$?
+          set -e
+          echo "Optimize:clear finished with exit code: $OPTIMIZE_EXIT_CODE"
+          
           echo "Listing Artisan commands (check if app boots)..."
           # Try running artisan list, capture output and exit code
           set +e # Temporarily disable exit on error for this command
@@ -142,8 +151,9 @@ jobs:
           echo "Running migrations..."
           /usr/bin/php8.2-cli artisan migrate --force
           
-          echo "Clearing caches..."
-          /usr/bin/php8.2-cli artisan optimize:clear
+          # Optimize:clear is already run earlier if list succeeded
+          # echo "Clearing caches..."
+          # /usr/bin/php8.2-cli artisan optimize:clear
           
           # /usr/bin/php8.2-cli artisan queue:restart # If you use queues
           echo "Post-deployment commands finished successfully." 
