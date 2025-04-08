@@ -23,6 +23,13 @@ jobs:
     - name: Set working directory to project
       run: cd project
 
+    # Create an empty SQLite database file to prevent errors during package discovery
+    - name: Create dummy database file for CI
+      working-directory: ./project
+      run: |
+        mkdir -p database
+        touch database/database.sqlite
+
     - name: Install Composer dependencies
       working-directory: ./project
       run: composer install --optimize-autoloader --no-dev --no-interaction --no-progress
