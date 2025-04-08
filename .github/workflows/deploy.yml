@@ -20,27 +20,12 @@ jobs:
         extensions: mbstring, xml, curl, zip, gd, bcmath # Add necessary PHP extensions
         tools: composer
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20' # Or the Node.js version required by your project
-        cache: 'npm'
-        cache-dependency-path: project/package-lock.json # Adjust if you use yarn or another lock file
-
     - name: Set working directory to project
       run: cd project
 
     - name: Install Composer dependencies
       working-directory: ./project
       run: composer install --optimize-autoloader --no-dev --no-interaction --no-progress
-
-    - name: Install Node dependencies
-      working-directory: ./project
-      run: npm ci
-
-    - name: Build frontend assets
-      working-directory: ./project
-      run: npm run build
 
     # ---- Start of deployment section (adapt as needed) ----
 
