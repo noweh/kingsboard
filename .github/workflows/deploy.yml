@@ -72,18 +72,22 @@ jobs:
         # key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           set -e
+          TARGET_DIR=${{ secrets.TARGET_DIRECTORY }}
+          SHARED_DIR=$TARGET_DIR/shared
+          CURRENT_DIR=$TARGET_DIR/current
+          
           echo "Creating symlink for .env file"
           # Remove existing .env file or link in current if it exists
-          rm -f ${{ secrets.TARGET_DIRECTORY }}/current/.env
+          rm -f $CURRENT_DIR/.env
           # Create the .env symlink: target -> source
-          ln -snf ${{ secrets.TARGET_DIRECTORY }}/shared/.env ${{ secrets.TARGET_DIRECTORY }}/current/.env
+          ln -snf $SHARED_DIR/.env $CURRENT_DIR/.env
           echo ".env symlink created"
           
           echo "Linking storage directory"
           # Remove existing storage directory in current if it exists
-          rm -rf ${{ secrets.TARGET_DIRECTORY }}/current/storage
+          rm -rf $CURRENT_DIR/storage
           # Create the storage symlink: target -> source
-          ln -snf ${{ secrets.TARGET_DIRECTORY }}/shared/storage ${{ secrets.TARGET_DIRECTORY }}/current/storage
+          ln -snf $SHARED_DIR/storage $CURRENT_DIR/storage
           echo "Storage directory linked"
 
     # Optional: Run migrations and other post-deployment commands (via SSH) - Uses ssh-action (runs remotely)
