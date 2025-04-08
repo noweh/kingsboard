@@ -77,18 +77,21 @@ jobs:
           CURRENT_DIR=$TARGET_DIR/current
           
           echo "Creating symlink for .env file"
-          # Remove existing .env file or link in current if it exists
           rm -f $CURRENT_DIR/.env
-          # Create the .env symlink: target -> source
           ln -snf $SHARED_DIR/.env $CURRENT_DIR/.env
           echo ".env symlink created"
           
           echo "Linking storage directory"
-          # Remove existing storage directory in current if it exists
           rm -rf $CURRENT_DIR/storage
-          # Create the storage symlink: target -> source
           ln -snf $SHARED_DIR/storage $CURRENT_DIR/storage
           echo "Storage directory linked"
+          
+          echo "Adjusting permissions for bootstrap/cache"
+          # Ensure bootstrap/cache directory exists in current deployment
+          mkdir -p $CURRENT_DIR/bootstrap/cache
+          # Set appropriate permissions for bootstrap cache (775 recommended)
+          chmod -R 775 $CURRENT_DIR/bootstrap/cache
+          echo "bootstrap/cache permissions adjusted"
 
     # Optional: Run migrations and other post-deployment commands (via SSH) - Uses ssh-action (runs remotely)
     - name: Run post-deployment commands
@@ -110,7 +113,8 @@ jobs:
           /usr/bin/php8.2-cli -m
           
           echo "Checking critical directory permissions..."
-          ls -ld .env bootstrap/cache storage storage/framework storage/logs
+          # Check permissions of links and bootstrap/cache within the current directory
+          ls -ld .env bootstrap/cache storage 
           echo "----
           
           echo "Listing Artisan commands (check if app boots)..."
