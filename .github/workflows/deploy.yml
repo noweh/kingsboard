@@ -114,6 +114,16 @@ jobs:
           echo "Running post-deployment commands in target directory: ${{ secrets.TARGET_DIRECTORY }}/current"
           cd ${{ secrets.TARGET_DIRECTORY }}/current
           
+          echo "Debug: Verifying storage link target and permissions..."
+          SHARED_STORAGE_TARGET=$(readlink storage)
+          echo "Storage link points to: $SHARED_STORAGE_TARGET"
+          ls -ld "$SHARED_STORAGE_TARGET" 
+          ls -ld "$SHARED_STORAGE_TARGET/logs" 
+          echo "Debug: Attempting to write to logs directory..."
+          touch "$SHARED_STORAGE_TARGET/logs/test_write.log" && echo "Write test successful." || echo "Write test FAILED."
+          rm -f "$SHARED_STORAGE_TARGET/logs/test_write.log"
+          echo "Debug: --- End verification ---"
+          
           echo "Checking PHP CLI version..."
           /usr/bin/php8.2-cli -v
           
