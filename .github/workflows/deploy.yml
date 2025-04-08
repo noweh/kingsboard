@@ -48,13 +48,15 @@ jobs:
         REMOTE_USER: ${{ secrets.REMOTE_USER }}
         TARGET_PATH: ${{ secrets.TARGET_DIRECTORY }}/current/
       run: |
-        sshpass -e rsync -rlgoDzvc -i --delete \
-        --rsh='ssh -o StrictHostKeyChecking=no -p 22' \
-        --exclude='/storage/' \
-        # --exclude='/vendor/' # Removed exclusion: vendor dir is needed on the server
-        --exclude='.env' \
-        --exclude='.git/' \
-        --exclude='.github/' \
+        # Use standard rsync options (archive, verbose, compress, itemize-changes, delete)
+        # Use double quotes for --rsh argument
+        # Simplify exclude patterns
+        sshpass -e rsync -avzi --delete \
+        --rsh="ssh -o StrictHostKeyChecking=no -p 22" \
+        --exclude=storage \
+        --exclude=.env \
+        --exclude=.git \
+        --exclude=.github \
         ./project/ ${REMOTE_USER}@${REMOTE_HOST}:${TARGET_PATH}
 
     # Option 2: Deploy via FTP/SFTP - Commented out as SSH is used
