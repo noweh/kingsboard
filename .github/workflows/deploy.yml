@@ -3,7 +3,7 @@ name: Deploy Laravel Project
 on:
   push:
     branches:
-      - master
+      - master # Or the branch you use for production
 
 jobs:
   deploy:
@@ -23,7 +23,7 @@ jobs:
     - name: Set working directory to project
       run: cd project
 
-    # Create an empty SQLite database file to prevent errors during package discovery
+    # Create an empty SQLite database file for CI if needed by composer scripts
     - name: Create dummy database file for CI
       working-directory: ./project
       run: |
@@ -38,20 +38,16 @@ jobs:
     - name: Install sshpass
       run: sudo apt-get update && sudo apt-get install -y sshpass
 
-    # ---- Start of deployment section (adapt as needed) ----
+    # ---- Deployment Section ----
 
-    # Option 1: Deploy via rsync using SSH with password authentication (executed from runner)
     - name: Deploy using rsync (SSH with Password)
       env:
-        SSHPASS: ${{ secrets.SSH_PASSWORD }} # Use environment variable for sshpass
+        SSHPASS: ${{ secrets.SSH_PASSWORD }}
         REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
         REMOTE_USER: ${{ secrets.REMOTE_USER }}
         TARGET_PATH: ${{ secrets.TARGET_DIRECTORY }}/current/
       run: |
-        # Use standard rsync options (archive, verbose, compress, itemize-changes, delete)
-        # Use double quotes for --rsh argument
-        # Simplify exclude patterns
-        sshpass -e rsync -avzi --delete \
+        sshpass -e rsync -avz --delete \
         --rsh="ssh -o StrictHostKeyChecking=no -p 22" \
         --exclude=storage \
         --exclude=.env \
@@ -59,134 +55,57 @@ jobs:
         --exclude=.github \
         ./project/ ${REMOTE_USER}@${REMOTE_HOST}:${TARGET_PATH}
 
-    # Option 2: Deploy via FTP/SFTP - Commented out as SSH is used
-    # ... (FTP section remains commented out) ...
-
-    # ---- End of deployment section ----
-
-    # Optional: Create required symlinks (e.g., for .env, storage) - Uses ssh-action (runs remotely)
+    # Create shared symlinks and necessary directories/permissions
     - name: Create shared symlinks and directories
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.REMOTE_HOST }}
         username: ${{ secrets.REMOTE_USER }}
         password: ${{ secrets.SSH_PASSWORD }} # Use password authentication
-        # key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           set -e
           TARGET_DIR=${{ secrets.TARGET_DIRECTORY }}
           SHARED_DIR=$TARGET_DIR/shared
           CURRENT_DIR=$TARGET_DIR/current
           
-          echo "Creating symlink for .env file"
+          echo "Creating .env symlink"
           rm -f $CURRENT_DIR/.env
           ln -snf $SHARED_DIR/.env $CURRENT_DIR/.env
-          echo ".env symlink created"
           
-          echo "Linking storage directory and creating/permissioning subdirs"
+          echo "Linking storage directory and ensuring structure/permissions"
           rm -rf $CURRENT_DIR/storage
           ln -snf $SHARED_DIR/storage $CURRENT_DIR/storage
-          # Ensure base shared storage directory exists and has minimal structure
           mkdir -p $SHARED_DIR/storage/app/public
           mkdir -p $SHARED_DIR/storage/framework/cache/data
           mkdir -p $SHARED_DIR/storage/framework/sessions
           mkdir -p $SHARED_DIR/storage/framework/views
           mkdir -p $SHARED_DIR/storage/logs
-          # Set appropriate permissions for storage (775 recommended)
           chmod -R 775 $SHARED_DIR/storage
-          echo "Storage directory linked and structured/permissioned"
           
-          echo "Adjusting permissions for bootstrap/cache"
-          # Ensure bootstrap/cache directory exists in current deployment
+          echo "Ensuring bootstrap/cache permissions"
           mkdir -p $CURRENT_DIR/bootstrap/cache
-          # Set appropriate permissions for bootstrap cache (775 recommended)
           chmod -R 775 $CURRENT_DIR/bootstrap/cache
-          echo "bootstrap/cache permissions adjusted"
 
-    # Optional: Run migrations and other post-deployment commands (via SSH) - Uses ssh-action (runs remotely)
+    # Run post-deployment commands
     - name: Run post-deployment commands
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.REMOTE_HOST }}
         username: ${{ secrets.REMOTE_USER }}
         password: ${{ secrets.SSH_PASSWORD }} # Use password authentication
-        # key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          set -e # Exit immediately if a command exits with a non-zero status, except where handled.
+          set -e 
           echo "Running post-deployment commands in target directory: ${{ secrets.TARGET_DIRECTORY }}/current"
           cd ${{ secrets.TARGET_DIRECTORY }}/current
           
-          echo "Debug: Verifying storage link target and permissions..."
-          SHARED_STORAGE_TARGET=$(readlink storage)
-          echo "Storage link points to: $SHARED_STORAGE_TARGET"
-          ls -ld "$SHARED_STORAGE_TARGET" 
-          ls -ld "$SHARED_STORAGE_TARGET/logs" 
-          echo "Debug: Attempting to write to logs directory..."
-          touch "$SHARED_STORAGE_TARGET/logs/test_write.log" && echo "Write test successful." || echo "Write test FAILED."
-          rm -f "$SHARED_STORAGE_TARGET/logs/test_write.log"
-          echo "Debug: --- End verification ---"
-          
-          echo "Checking Artisan --version (simplest command)..."
-          set +e
-          # Add PHP flags to display errors directly
-          /usr/bin/php8.2-cli -d display_errors=1 -d error_reporting=E_ALL artisan --version
-          VERSION_EXIT_CODE=$?
-          set -e
-          echo "Artisan --version finished with exit code: $VERSION_EXIT_CODE"
-          # If even --version fails, exit immediately
-          if [ $VERSION_EXIT_CODE -ne 0 ]; then
-            echo "Artisan --version failed. Exiting."
-            exit $VERSION_EXIT_CODE
-          fi
-
-          echo "Checking PHP CLI version..."
-          /usr/bin/php8.2-cli -v
-          
-          echo "Checking loaded PHP CLI modules..."
-          /usr/bin/php8.2-cli -m
-          
-          echo "Checking critical directory permissions..."
-          # Check permissions of links and bootstrap/cache within the current directory
-          ls -ld .env bootstrap/cache storage 
-          echo "----"
-          
-          echo "Attempting to clear caches first..."
-          # Run optimize:clear first to rule out cache issues during boot
-          # Allow this command to fail without stopping the script immediately
-          set +e
-          /usr/bin/php8.2-cli artisan optimize:clear -vvv 2>&1
-          OPTIMIZE_EXIT_CODE=$?
-          set -e
-          echo "Optimize:clear finished with exit code: $OPTIMIZE_EXIT_CODE"
-          
-          echo "Listing Artisan commands (check if app boots)..."
-          # Try running artisan list, capture output and exit code
-          set +e # Temporarily disable exit on error for this command
-          ARTISAN_LIST_OUTPUT=$(/usr/bin/php8.2-cli artisan list -vvv 2>&1)
-          ARTISAN_LIST_EXIT_CODE=$?
-          set -e # Re-enable exit on error
-          
-          echo "--- Artisan List Output Start ---"
-          echo "$ARTISAN_LIST_OUTPUT"
-          echo "--- Artisan List Output End ---"
-          echo "Artisan list finished with exit code: $ARTISAN_LIST_EXIT_CODE"
-          
-          # If artisan list failed, show log tail and exit
-          if [ $ARTISAN_LIST_EXIT_CODE -ne 0 ]; then
-            echo "Artisan list failed. Checking Laravel log tail..."
-            # Use tail on the linked storage directory
-            tail -n 50 storage/logs/laravel.log || echo "(Could not tail laravel.log)"
-            echo "Exiting due to artisan list failure."
-            exit $ARTISAN_LIST_EXIT_CODE
-          fi
-          
-          # --- If artisan list succeeded, continue --- 
           echo "Running migrations..."
           /usr/bin/php8.2-cli artisan migrate --force
           
-          # Optimize:clear is already run earlier if list succeeded
-          # echo "Clearing caches..."
-          # /usr/bin/php8.2-cli artisan optimize:clear
+          echo "Clearing caches..."
+          /usr/bin/php8.2-cli artisan optimize:clear
           
-          # /usr/bin/php8.2-cli artisan queue:restart # If you use queues
+          # Uncomment if you use queues
+          # echo "Restarting queue worker..."
+          # /usr/bin/php8.2-cli artisan queue:restart
+          
           echo "Post-deployment commands finished successfully." 
