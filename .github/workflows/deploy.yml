@@ -1,0 +1,92 @@
+name: Deploy Laravel Project
+
+on:
+  push:
+    branches:
+      - main # Or the branch you use for production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, xml, curl, zip, gd, bcmath # Add necessary PHP extensions
+        tools: composer
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20' # Or the Node.js version required by your project
+        cache: 'npm'
+        cache-dependency-path: project/package-lock.json # Adjust if you use yarn or another lock file
+
+    - name: Set working directory to project
+      run: cd project
+
+    - name: Install Composer dependencies
+      working-directory: ./project
+      run: composer install --optimize-autoloader --no-dev --no-interaction --no-progress
+
+    - name: Install Node dependencies
+      working-directory: ./project
+      run: npm ci
+
+    - name: Build frontend assets
+      working-directory: ./project
+      run: npm run build
+
+    # ---- Start of deployment section (adapt as needed) ----
+
+    - name: Deploy using rsync
+      uses: easingthemes/ssh-deploy@main
+      with:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        ARGS: "-rlgoDzvc -i --delete" # rsync options
+        SOURCE: "project/" # Source directory
+        REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+        REMOTE_USER: ${{ secrets.REMOTE_USER }}
+        TARGET: ${{ secrets.TARGET_DIRECTORY }}/current # Deploy into the 'current' subdirectory
+        EXCLUDE: "/storage/, /vendor/, node_modules/, .env, .git/, .github/" # Exclude .env and other directories/files
+
+    # ---- End of deployment section ----
+
+    # Optional: Create required symlinks (e.g., for .env, storage)
+    - name: Create .env symlink
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.REMOTE_HOST }}
+        username: ${{ secrets.REMOTE_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "Creating symlink for .env file"
+          # Remove existing .env file or link in current if it exists
+          rm -f ${{ secrets.TARGET_DIRECTORY }}/current/.env
+          # Create the symlink: target -> source
+          ln -snf ${{ secrets.TARGET_DIRECTORY }}/shared/.env ${{ secrets.TARGET_DIRECTORY }}/current/.env
+          echo "Symlink created"
+          # Add other symlinks if needed (e.g., for storage)
+          # echo "Linking storage directory"
+          # rm -rf ${{ secrets.TARGET_DIRECTORY }}/current/storage
+          # ln -snf ${{ secrets.TARGET_DIRECTORY }}/shared/storage ${{ secrets.TARGET_DIRECTORY }}/current/storage
+
+    # Optional: Run migrations and other post-deployment commands (via SSH)
+    # Ensure the SSH key has the necessary permissions
+    - name: Run post-deployment commands
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.REMOTE_HOST }}
+        username: ${{ secrets.REMOTE_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "Running post-deployment commands in target directory"
+          cd ${{ secrets.TARGET_DIRECTORY }}/current # CD into the 'current' directory
+          php artisan migrate --force
+          php artisan optimize:clear # Or other commands like cache:clear, config:cache, etc.
+          # php artisan queue:restart # If you use queues 
