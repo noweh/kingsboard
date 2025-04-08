@@ -63,7 +63,7 @@ jobs:
     # ---- End of deployment section ----
 
     # Optional: Create required symlinks (e.g., for .env, storage) - Uses ssh-action (runs remotely)
-    - name: Create shared symlinks
+    - name: Create shared symlinks and directories
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.REMOTE_HOST }}
@@ -81,10 +81,18 @@ jobs:
           ln -snf $SHARED_DIR/.env $CURRENT_DIR/.env
           echo ".env symlink created"
           
-          echo "Linking storage directory"
+          echo "Linking storage directory and creating/permissioning subdirs"
           rm -rf $CURRENT_DIR/storage
           ln -snf $SHARED_DIR/storage $CURRENT_DIR/storage
-          echo "Storage directory linked"
+          # Ensure base shared storage directory exists and has minimal structure
+          mkdir -p $SHARED_DIR/storage/app/public
+          mkdir -p $SHARED_DIR/storage/framework/cache/data
+          mkdir -p $SHARED_DIR/storage/framework/sessions
+          mkdir -p $SHARED_DIR/storage/framework/views
+          mkdir -p $SHARED_DIR/storage/logs
+          # Set appropriate permissions for storage (775 recommended)
+          chmod -R 775 $SHARED_DIR/storage
+          echo "Storage directory linked and structured/permissioned"
           
           echo "Adjusting permissions for bootstrap/cache"
           # Ensure bootstrap/cache directory exists in current deployment
