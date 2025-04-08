@@ -63,7 +63,7 @@ jobs:
     # ---- End of deployment section ----
 
     # Optional: Create required symlinks (e.g., for .env, storage) - Uses ssh-action (runs remotely)
-    - name: Create .env symlink
+    - name: Create shared symlinks
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.REMOTE_HOST }}
@@ -71,16 +71,20 @@ jobs:
         password: ${{ secrets.SSH_PASSWORD }} # Use password authentication
         # key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
+          set -e
           echo "Creating symlink for .env file"
           # Remove existing .env file or link in current if it exists
           rm -f ${{ secrets.TARGET_DIRECTORY }}/current/.env
-          # Create the symlink: target -> source
+          # Create the .env symlink: target -> source
           ln -snf ${{ secrets.TARGET_DIRECTORY }}/shared/.env ${{ secrets.TARGET_DIRECTORY }}/current/.env
-          echo "Symlink created"
-          # Add other symlinks if needed (e.g., for storage)
-          # echo "Linking storage directory"
-          # rm -rf ${{ secrets.TARGET_DIRECTORY }}/current/storage
-          # ln -snf ${{ secrets.TARGET_DIRECTORY }}/shared/storage ${{ secrets.TARGET_DIRECTORY }}/current/storage
+          echo ".env symlink created"
+          
+          echo "Linking storage directory"
+          # Remove existing storage directory in current if it exists
+          rm -rf ${{ secrets.TARGET_DIRECTORY }}/current/storage
+          # Create the storage symlink: target -> source
+          ln -snf ${{ secrets.TARGET_DIRECTORY }}/shared/storage ${{ secrets.TARGET_DIRECTORY }}/current/storage
+          echo "Storage directory linked"
 
     # Optional: Run migrations and other post-deployment commands (via SSH) - Uses ssh-action (runs remotely)
     - name: Run post-deployment commands
@@ -91,8 +95,21 @@ jobs:
         password: ${{ secrets.SSH_PASSWORD }} # Use password authentication
         # key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          echo "Running post-deployment commands in target directory"
-          cd ${{ secrets.TARGET_DIRECTORY }}/current # CD into the 'current' directory
-          /usr/bin/php8.3-cli artisan migrate --force # Use specific PHP 8.3 CLI path
-          /usr/bin/php8.3-cli artisan optimize:clear # Use specific PHP 8.3 CLI path
-          # /usr/bin/php8.3-cli artisan queue:restart # If you use queues 
+          set -e # Exit immediately if a command exits with a non-zero status.
+          echo "Running post-deployment commands in target directory: ${{ secrets.TARGET_DIRECTORY }}/current"
+          cd ${{ secrets.TARGET_DIRECTORY }}/current
+          
+          echo "Checking PHP CLI version..."
+          /usr/bin/php8.2-cli -v # Use specific PHP 8.2 CLI path
+          
+          echo "Listing Artisan commands (check if app boots)..."
+          /usr/bin/php8.2-cli artisan list # Use specific PHP 8.2 CLI path
+          
+          echo "Running migrations..."
+          /usr/bin/php8.2-cli artisan migrate --force # Use specific PHP 8.2 CLI path
+          
+          echo "Clearing caches..."
+          /usr/bin/php8.2-cli artisan optimize:clear # Use specific PHP 8.2 CLI path
+          
+          # /usr/bin/php8.2-cli artisan queue:restart # If you use queues
+          echo "Post-deployment commands finished successfully." 
