@@ -51,7 +51,7 @@ jobs:
         sshpass -e rsync -rlgoDzvc -i --delete \
         --rsh='ssh -o StrictHostKeyChecking=no -p 22' \
         --exclude='/storage/' \
-        --exclude='/vendor/' \
+        # --exclude='/vendor/' # Removed exclusion: vendor dir is needed on the server
         --exclude='.env' \
         --exclude='.git/' \
         --exclude='.github/' \
@@ -124,6 +124,19 @@ jobs:
           rm -f "$SHARED_STORAGE_TARGET/logs/test_write.log"
           echo "Debug: --- End verification ---"
           
+          echo "Checking Artisan --version (simplest command)..."
+          set +e
+          # Add PHP flags to display errors directly
+          /usr/bin/php8.2-cli -d display_errors=1 -d error_reporting=E_ALL artisan --version
+          VERSION_EXIT_CODE=$?
+          set -e
+          echo "Artisan --version finished with exit code: $VERSION_EXIT_CODE"
+          # If even --version fails, exit immediately
+          if [ $VERSION_EXIT_CODE -ne 0 ]; then
+            echo "Artisan --version failed. Exiting."
+            exit $VERSION_EXIT_CODE
+          fi
+
           echo "Checking PHP CLI version..."
           /usr/bin/php8.2-cli -v
           
