@@ -37,7 +37,7 @@ jobs:
         SOURCE: "project/" # Source directory
         REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
         REMOTE_USER: ${{ secrets.REMOTE_USER }}
-        TARGET: ${{ secrets.TARGET_DIRECTORY }}/current # Deploy into the 'current' subdirectory
+        TARGET: kingsboard-api/current # Deploy into the 'current' subdirectory
         EXCLUDE: "/storage/, /vendor/, node_modules/, .env, .git/, .github/" # Exclude .env and other directories/files
 
     # ---- End of deployment section ----
@@ -52,14 +52,14 @@ jobs:
         script: |
           echo "Creating symlink for .env file"
           # Remove existing .env file or link in current if it exists
-          rm -f ${{ secrets.TARGET_DIRECTORY }}/current/.env
+          rm -f kingsboard-api/current/.env
           # Create the symlink: target -> source
-          ln -snf ${{ secrets.TARGET_DIRECTORY }}/shared/.env ${{ secrets.TARGET_DIRECTORY }}/current/.env
+          ln -snf kingsboard-api/shared/.env kingsboard-api/current/.env
           echo "Symlink created"
           # Add other symlinks if needed (e.g., for storage)
           # echo "Linking storage directory"
-          # rm -rf ${{ secrets.TARGET_DIRECTORY }}/current/storage
-          # ln -snf ${{ secrets.TARGET_DIRECTORY }}/shared/storage ${{ secrets.TARGET_DIRECTORY }}/current/storage
+          # rm -rf kingsboard-api/current/storage
+          # ln -snf kingsboard-api/shared/storage kingsboard-api/current/storage
 
     # Optional: Run migrations and other post-deployment commands (via SSH)
     # Ensure the SSH key has the necessary permissions
@@ -71,7 +71,7 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           echo "Running post-deployment commands in target directory"
-          cd ${{ secrets.TARGET_DIRECTORY }}/current # CD into the 'current' directory
+          cd kingsboard-api/current # CD into the 'current' directory
           php artisan migrate --force
           php artisan optimize:clear # Or other commands like cache:clear, config:cache, etc.
           # php artisan queue:restart # If you use queues 
