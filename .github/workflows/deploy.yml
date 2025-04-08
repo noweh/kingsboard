@@ -118,7 +118,7 @@ jobs:
           echo "----"
           
           echo "Listing Artisan commands (check if app boots)..."
-          /usr/bin/php8.2-cli artisan list
+          /usr/bin/php8.2-cli artisan list -vvv
           
           echo "Running migrations..."
           /usr/bin/php8.2-cli artisan migrate --force
