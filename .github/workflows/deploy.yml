@@ -36,16 +36,22 @@ jobs:
 
     # ---- Start of deployment section (adapt as needed) ----
 
-    - name: Deploy using rsync
-      uses: easingthemes/ssh-deploy@main
+    # Option 1: Deploy via rsync using SSH with password authentication
+    - name: Deploy using rsync (SSH with Password)
+      uses: appleboy/ssh-action@v1.0.3
       with:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        ARGS: "-rlgoDzvc -i --delete" # rsync options
-        SOURCE: "project/" # Source directory
-        REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
-        REMOTE_USER: ${{ secrets.REMOTE_USER }}
-        TARGET: kingsboard-api/current # Deploy into the 'current' subdirectory
-        EXCLUDE: "/storage/, /vendor/, node_modules/, .env, .git/, .github/" # Exclude .env and other directories/files
+        host: ${{ secrets.REMOTE_HOST }}
+        username: ${{ secrets.REMOTE_USER }}
+        password: ${{ secrets.SSH_PASSWORD }}
+        # port: 22 # Default SSH port
+        script: |
+          rsync -rlgoDzvc -i --delete \
+          --exclude='/storage/' \
+          --exclude='/vendor/' \
+          --exclude='.env' \
+          --exclude='.git/' \
+          --exclude='.github/' \
+          ./project/ ${{ secrets.TARGET_DIRECTORY }}/current/
 
     # ---- End of deployment section ----
 
@@ -55,18 +61,19 @@ jobs:
       with:
         host: ${{ secrets.REMOTE_HOST }}
         username: ${{ secrets.REMOTE_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        password: ${{ secrets.SSH_PASSWORD }} # Use password authentication
+        # key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           echo "Creating symlink for .env file"
           # Remove existing .env file or link in current if it exists
-          rm -f kingsboard-api/current/.env
+          rm -f ${{ secrets.TARGET_DIRECTORY }}/current/.env
           # Create the symlink: target -> source
-          ln -snf kingsboard-api/shared/.env kingsboard-api/current/.env
+          ln -snf ${{ secrets.TARGET_DIRECTORY }}/shared/.env ${{ secrets.TARGET_DIRECTORY }}/current/.env
           echo "Symlink created"
           # Add other symlinks if needed (e.g., for storage)
           # echo "Linking storage directory"
-          # rm -rf kingsboard-api/current/storage
-          # ln -snf kingsboard-api/shared/storage kingsboard-api/current/storage
+          # rm -rf ${{ secrets.TARGET_DIRECTORY }}/current/storage
+          # ln -snf ${{ secrets.TARGET_DIRECTORY }}/shared/storage ${{ secrets.TARGET_DIRECTORY }}/current/storage
 
     # Optional: Run migrations and other post-deployment commands (via SSH)
     # Ensure the SSH key has the necessary permissions
@@ -75,10 +82,11 @@ jobs:
       with:
         host: ${{ secrets.REMOTE_HOST }}
         username: ${{ secrets.REMOTE_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        password: ${{ secrets.SSH_PASSWORD }} # Use password authentication
+        # key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           echo "Running post-deployment commands in target directory"
-          cd kingsboard-api/current # CD into the 'current' directory
+          cd ${{ secrets.TARGET_DIRECTORY }}/current # CD into the 'current' directory
           php artisan migrate --force
           php artisan optimize:clear # Or other commands like cache:clear, config:cache, etc.
           # php artisan queue:restart # If you use queues 
