@@ -102,7 +102,7 @@ jobs:
         password: ${{ secrets.SSH_PASSWORD }} # Use password authentication
         # key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          set -e # Exit immediately if a command exits with a non-zero status.
+          set -e # Exit immediately if a command exits with a non-zero status, except where handled.
           echo "Running post-deployment commands in target directory: ${{ secrets.TARGET_DIRECTORY }}/current"
           cd ${{ secrets.TARGET_DIRECTORY }}/current
           
@@ -118,8 +118,27 @@ jobs:
           echo "----"
           
           echo "Listing Artisan commands (check if app boots)..."
-          /usr/bin/php8.2-cli artisan list -vvv
+          # Try running artisan list, capture output and exit code
+          set +e # Temporarily disable exit on error for this command
+          ARTISAN_LIST_OUTPUT=$(/usr/bin/php8.2-cli artisan list -vvv 2>&1)
+          ARTISAN_LIST_EXIT_CODE=$?
+          set -e # Re-enable exit on error
           
+          echo "--- Artisan List Output Start ---"
+          echo "$ARTISAN_LIST_OUTPUT"
+          echo "--- Artisan List Output End ---"
+          echo "Artisan list finished with exit code: $ARTISAN_LIST_EXIT_CODE"
+          
+          # If artisan list failed, show log tail and exit
+          if [ $ARTISAN_LIST_EXIT_CODE -ne 0 ]; then
+            echo "Artisan list failed. Checking Laravel log tail..."
+            # Use tail on the linked storage directory
+            tail -n 50 storage/logs/laravel.log || echo "(Could not tail laravel.log)"
+            echo "Exiting due to artisan list failure."
+            exit $ARTISAN_LIST_EXIT_CODE
+          fi
+          
+          # --- If artisan list succeeded, continue --- 
           echo "Running migrations..."
           /usr/bin/php8.2-cli artisan migrate --force
           
