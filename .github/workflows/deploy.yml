@@ -93,6 +93,6 @@ jobs:
         script: |
           echo "Running post-deployment commands in target directory"
           cd ${{ secrets.TARGET_DIRECTORY }}/current # CD into the 'current' directory
-          /usr/bin/php8.2-cli artisan migrate --force # Use specific PHP 8.2 CLI path
-          /usr/bin/php8.2-cli artisan optimize:clear # Use specific PHP 8.2 CLI path
-          # /usr/bin/php8.2-cli artisan queue:restart # If you use queues 
+          /usr/bin/php8.3-cli artisan migrate --force # Use specific PHP 8.3 CLI path
+          /usr/bin/php8.3-cli artisan optimize:clear # Use specific PHP 8.3 CLI path
+          # /usr/bin/php8.3-cli artisan queue:restart # If you use queues 
