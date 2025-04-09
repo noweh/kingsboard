@@ -6,6 +6,20 @@
 
     RewriteEngine On
 
+    # ----------------------------------------------------------------------
+    # | Force HTTPS for Non-Local Hosts                                    |
+    # ----------------------------------------------------------------------
+    # 1. Check if the host is NOT a common local development hostname
+    #    (Adjust the pattern if you use other local domains)
+    RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1|\[::1\]|.*\.test|.*\.local)$ [NC]
+
+    # 2. Check if the connection is not already secure (HTTPS)
+    RewriteCond %{HTTPS} !=on
+
+    # 3. Redirect to the HTTPS version of the same URL
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    # ----------------------------------------------------------------------
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
